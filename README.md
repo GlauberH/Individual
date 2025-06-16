@@ -180,4 +180,4 @@ Posição: 15
 - Gerenciamento de memória dinâmica para otimização
 
 ---
-*Projeto desenvolvido para a disciplina de Estruturas de Dados*
+*Projeto desenvolvido para a disciplina de Estrutura de Dados*
