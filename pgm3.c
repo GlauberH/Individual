@@ -10,10 +10,10 @@
 #define MAX_STRING_VALUE 16
 
 typedef enum {
-    TIPO_INTEIRO,
-    TIPO_BOOLEANO, 
-    TIPO_RACIONAL,
-    TIPO_STRING
+    TIPO_INTEIRO, // CONJ_Z
+    TIPO_BOOLEANO, // BINARIO  
+    TIPO_RACIONAL, // CONJ_Q
+    TIPO_STRING // TEXTO
 } TipoDado;
 
 // Sensor
@@ -69,7 +69,6 @@ time_t converter_para_timestamp(int dia, int mes, int ano, int hora, int min, in
 
     time_t timestamp = mktime(&t);
     if (timestamp == -1) {
-        printf("Data inválida. Tente novamente.\n");
         return -1;
     } else {
         return timestamp;
@@ -77,18 +76,15 @@ time_t converter_para_timestamp(int dia, int mes, int ano, int hora, int min, in
 }
 
 time_t gerar_timestamp_aleatorio(struct tm *inicial, struct tm *final) {
-    
     time_t timestamp_inicial, timestamp_final;
         
     timestamp_inicial = mktime(inicial);
     if (timestamp_inicial == -1) {
-        printf("Data inválida.\n");
         return -1;
     }
 
     timestamp_final = mktime(final);
     if (timestamp_final == -1) {
-        printf("Data inválida.\n");
         return -1;
     }
 
@@ -97,7 +93,30 @@ time_t gerar_timestamp_aleatorio(struct tm *inicial, struct tm *final) {
     return timestamp_aleatorio;
 }
 
-// Valor Aleatorio
+// Converte string de tipo pra enum
+
+TipoDado converter_tipo_string(const char* tipo_str) {
+    if (strcmp(tipo_str, "CONJ_Z") == 0) {
+        return TIPO_INTEIRO;
+    } else if (strcmp(tipo_str, "BINARIO") == 0) {
+        return TIPO_BOOLEANO;
+    } else if (strcmp(tipo_str, "CONJ_Q") == 0) {
+        return TIPO_RACIONAL;
+    } else if (strcmp(tipo_str, "TEXTO") == 0) {
+        return TIPO_STRING;
+    } else {
+        return -1;
+    }
+}
+
+int validar_tipo(const char* tipo_str) {
+    return (strcmp(tipo_str, "CONJ_Z") == 0 || 
+            strcmp(tipo_str, "BINARIO") == 0 || 
+            strcmp(tipo_str, "CONJ_Q") == 0 || 
+            strcmp(tipo_str, "TEXTO") == 0);
+}
+
+// Valor aleatório
 
 void gerarValor(TipoDado tipo, char *valor) {
     switch (tipo) {
@@ -108,11 +127,12 @@ void gerarValor(TipoDado tipo, char *valor) {
             strcpy(valor, (rand() % 2) ? "true" : "false");
             break;
         case TIPO_RACIONAL:
-            sprintf(valor, "%.3f", (rand() / (double)RAND_MAX) * 100.0);
+            sprintf(valor, "%.6f", (rand() / (double)RAND_MAX) * 100.0);
             break;
         case TIPO_STRING: {
             const char chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            int len = 3 + rand() % 6;
+            int len = 3 + rand() % 14;
+            if (len > MAX_STRING_VALUE) len = MAX_STRING_VALUE;
             for (int i = 0; i < len; i++) {
                 valor[i] = chars[rand() % 26];
             }
@@ -126,25 +146,29 @@ void gerarValor(TipoDado tipo, char *valor) {
 
 const char* tipo_para_str(TipoDado tipo) {
     switch (tipo) {
-        case TIPO_INTEIRO: return "INTEIRO";
-        case TIPO_BOOLEANO: return "BOOLEANO";
-        case TIPO_RACIONAL: return "RACIONAL";
-        case TIPO_STRING: return "STRING";
-        default: return "?";
+        case TIPO_INTEIRO: return "CONJ_Z";
+        case TIPO_BOOLEANO: return "BINARIO";
+        case TIPO_RACIONAL: return "CONJ_Q";
+        case TIPO_STRING: return "TEXTO";
+        default: return "DESCONHECIDO";
     }
 }
 
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("Uso correto: %s <data_inicio> <hora_inicio> <data_fim> <hora_fim> <sens> [seed]\n", argv[0]);
-        printf("Ex: %s \"01/01/2024\" \"00:00:00\" \"01/01/2024\" \"23:59:59\" \"TEMP:0,PRES:2,VIBR:0\" 12345\n", argv[0]);
-        printf("Tipos: 0=INT, 1=BOOL, 2=FLOAT, 3=STRING\n");
-        return 1;
-    }
+int comparar_leituras_dec(const void *a, const void *b) {
+    const Leitura *la = (const Leitura *)a;
+    const Leitura *lb = (const Leitura *)b;
     
+    if (la->timestamp > lb->timestamp) return -1;
+    if (la->timestamp < lb->timestamp) return 1;
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
     if (argc < 6) {
-        printf("Argumentos insuificientes.\n");
-        printf("Precisa de: data_inicio hora_inicio data_fim hora_fim sens [seed]\n");
+        printf("Uso: %s <data_inicio> <hora_inicio> <data_fim> <hora_fim> <sensores> [seed]\n", argv[0]);
+        printf("Exemplo: %s \"01/01/2024\" \"00:00:00\" \"31/12/2024\" \"23:59:59\" \"TEMP:CONJ_Z,PRESS:CONJ_Q,VIBR:BINARIO,NOME:TEXTO\"\n", argv[0]);
+        printf("Tipos válidos: CONJ_Z (inteiro), CONJ_Q (float), TEXTO (string), BINARIO (booleano)\n");
+        printf("A linha de comado de execução não é válida.\n");
         return 1;
     }
     
@@ -153,34 +177,40 @@ int main(int argc, char *argv[]) {
     unsigned seed = time(NULL);
     
     if (sscanf(argv[1], "%d/%d/%d", &dia_ini, &mes_ini, &ano_ini) != 3) {
-        printf("Erro na data inicial. Uso correto: DD/MM/AAAA\n");
+        printf("Erro: Data inicial inválida. Use formato DD/MM/AAAA\n");
+        printf("A linha de comando de execução não é válida.\n");
         return 1;
     }
     
     if (sscanf(argv[2], "%d:%d:%d", &hora_ini, &min_ini, &seg_ini) != 3) {
-        printf("Erro na hora inicial. Uso correto: HH:MM:SS\n");
+        printf("Erro: Hora inicial inválida. Use formato HH:MM:SS\n");
+        printf("A linha de comando de execução não é válida.\n");
         return 1;
     }
     
     if (sscanf(argv[3], "%d/%d/%d", &dia_fim, &mes_fim, &ano_fim) != 3) {
-        printf("erro na data final. Uso correto: DD/MM/AAAA\n");
+        printf("Erro: Data final inválida. Use formato DD/MM/AAAA\n");
+        printf("A linha de comando de execução não é válida.\n");
         return 1;
     }
     
     if (sscanf(argv[4], "%d:%d:%d", &hora_fim, &min_fim, &seg_fim) != 3) {
-        printf("Erro na hora final. Uso correto: HH:MM:SS\n");
+        printf("Erro: Hora final inválida. Use formato HH:MM:SS\n");
+        printf("A linha de comando de execução não é válida.\n");
         return 1;
     }
     
-    // Valida Data e Hora
+    // Validar Data e Hora
 
     if (!validar_data(dia_ini, mes_ini, ano_ini) || !validar_hora(hora_ini, min_ini, seg_ini)) {
-        printf("Erro na data/hora inicial.\n");
+        printf("Erro: Campos de data e hora inicial fora do intervalo de valores válidos.\n");
+        printf("A linha de comando de execução não é válida.\n");
         return 1;
     }
     
     if (!validar_data(dia_fim, mes_fim, ano_fim) || !validar_hora(hora_fim, min_fim, seg_fim)) {
-        printf("Erro na data/hora final.\n");
+        printf("Erro: Campos de data e hora final fora do intervalo de valores válidos.\n");
+        printf("A linha de comando de execução não é válida.\n");
         return 1;
     }
     
@@ -189,8 +219,15 @@ int main(int argc, char *argv[]) {
     time_t ts_ini = converter_para_timestamp(dia_ini, mes_ini, ano_ini, hora_ini, min_ini, seg_ini);
     time_t ts_fim = converter_para_timestamp(dia_fim, mes_fim, ano_fim, hora_fim, min_fim, seg_fim);
     
+    if (ts_ini == -1 || ts_fim == -1) {
+        printf("Erro: Campos de data e hora fora do intervalo de valores válidos.\n");
+        printf("A linha de comando de execução não é válida.\n");
+        return 1;
+    }
+    
     if (ts_ini >= ts_fim) {
-        printf("Datas fora de ordem.\n");
+        printf("Erro: Data inicial deve ser anterior à data final.\n");
+        printf("A linha de comando de execução não é válida.\n");
         return 1;
     }
     
@@ -205,33 +242,38 @@ int main(int argc, char *argv[]) {
     while (pedaco != NULL && num_sens < MAX_SENS) {
         char *dois_pts = strchr(pedaco, ':');
         if (dois_pts == NULL) {
-            printf("Sensor mal formatado: %s. Use NOME:TIPO\n", pedaco);
+            printf("Erro: Sensor mal formatado: %s. Use formato NOME:TIPO\n", pedaco);
+            printf("A linha de comando de execução não é válida.\n");
             return 1;
         }
         
         *dois_pts = '\0';
         char *nome = pedaco;
-        int tipo = atoi(dois_pts + 1);
+        char *tipo_str = dois_pts + 1;
         
-        if (strlen(nome) >= MAX_NAMES) {
-            printf("Nome muito grande: %s\n", nome);
+        if (strlen(nome) == 0 || strlen(nome) >= MAX_NAMES) {
+            printf("Erro: Nome do sensor inválido: %s\n", nome);
+            printf("A linha de comando de execução não é válida.\n");
             return 1;
         }
         
-        if (tipo < 0 || tipo > 3) {
-            printf("Tipo inválido para o sensor %s: %d\n", nome, tipo);
+        if (!validar_tipo(tipo_str)) {
+            printf("Erro: Tipo do sensor passado no argumento diferente de CONJ_Z, CONJ_Q, TEXTO e BINARIO.\n");
+            printf("Sensor: %s, Tipo inválido: %s\n", nome, tipo_str);
+            printf("A linha de comando de execução não é válida.\n");
             return 1;
         }
         
         strcpy(sens[num_sens].nome, nome);
-        sens[num_sens].tipo = (TipoDado)tipo;
+        sens[num_sens].tipo = converter_tipo_string(tipo_str);
         num_sens++;
         
         pedaco = strtok(NULL, ",");
     }
     
     if (num_sens == 0) {
-        printf("Sem sensor válido.\n");
+        printf("Erro: Nenhum sensor válido encontrado.\n");
+        printf("A linha de comando de execução não é válida.\n");
         return 1;
     }
     
@@ -241,10 +283,11 @@ int main(int argc, char *argv[]) {
     srand(seed);
     
     printf("# GERANDO DADOS DOS SENSORES\n");
-    printf("De: %02d/%02d/%04d %02d:%02d:%02d até %02d/%02d/%04d %02d:%02d:%02d\n",
+    printf("Período: %02d/%02d/%04d %02d:%02d:%02d até %02d/%02d/%04d %02d:%02d:%02d\n",
            dia_ini, mes_ini, ano_ini, hora_ini, min_ini, seg_ini,
            dia_fim, mes_fim, ano_fim, hora_fim, min_fim, seg_fim);
-    printf("Sensores: %d | Seed: %u\n\n", num_sens, seed);
+    printf("Sensores: %d | Seed: %u\n", num_sens, seed);
+    printf("Leituras por sensor: %d\n\n", LEIT_PSENSOR);
     
     struct tm tm_inicial = {0}, tm_final = {0};
     
@@ -267,20 +310,16 @@ int main(int argc, char *argv[]) {
     size_t total_leit = num_sens * LEIT_PSENSOR;
     static Leitura leituras[MAX_SENS * LEIT_PSENSOR];
     
-    printf("%d leituras pra cada sensor.\n", LEIT_PSENSOR);
-    
     size_t idx = 0;
     for (int i = 0; i < num_sens; i++) {
-        printf("Processando sensor %s [%s]...\n", 
+        printf("Gerando dados para sensor %s [%s]...\n", 
                sens[i].nome, tipo_para_str(sens[i].tipo));
         
         for (int j = 0; j < LEIT_PSENSOR; j++) {
-
             time_t ts = gerar_timestamp_aleatorio(&tm_inicial, &tm_final);
             if (ts == -1) {
-                printf("Erro no timestamp.\n");
+                printf("Erro ao gerar timestamp.\n");
                 return 1;
-
             }
             
             leituras[idx].timestamp = ts;
@@ -293,14 +332,17 @@ int main(int argc, char *argv[]) {
         }
     }
     
+    printf("\nOrdenando %zu leituras em ordem DECRESCENTE por timestamp...\n", total_leit);
+    qsort(leituras, total_leit, sizeof(Leitura), comparar_leituras_dec);
+    
     // Salva no arquivo
     FILE *arquivo = fopen("dados.txt", "w");
     if (arquivo == NULL) {
-        printf("Erro ao criar dados.txt.\n");
+        printf("Erro ao criar arquivo dados.txt\n");
         return 1;
     }
     
-    printf("\nSalvando no dados.txt...\n");
+    printf("Salvando arquivos dados.txt...\n");
     
     for (size_t i = 0; i < total_leit; i++) {
         fprintf(arquivo, "%ld %s %s\n",
@@ -313,15 +355,16 @@ int main(int argc, char *argv[]) {
     
     // Relatório final
 
-    printf("\n# SUCESSO\n");
-    printf("Arquivo: dados.txt criado com sucesso!\n");
-    printf("Total: %zu leituras\n", total_leit);
-    printf("Sensores: %d\n", num_sens);
+    printf("\n# ARQUIVO GERADO COM SUCESSO\n");
+    printf("Arquivo: dados.txt\n");
+    printf("Total de leituras: %zu\n", total_leit);
+    printf("Ordenação: decrscente por timestamp\n");
+    printf("Formato: <TIMESTAMP> <ID_SENSOR> <VALOR>\n\n");
     
-    printf("\nResumo dos sensores:\n");
+    printf("Resumo dos sensores:\n");
     for (int i = 0; i < num_sens; i++) {
         printf("- %s (%s): %d leituras\n", 
                sens[i].nome, tipo_para_str(sens[i].tipo), LEIT_PSENSOR);
     }
-
+    
 }
