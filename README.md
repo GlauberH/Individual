@@ -14,10 +14,10 @@ O sistema permite:
 ## Estrutura dos Dados
 
 ### Tipos de Dados Suportados
-- *INTEIRO*: Números inteiros
-- *BOOLEANO*: Valores true/false
-- *RACIONAL*: Números decimais
-- *STRING*: Texto de até 20 caracteres
+- *CONJ_Z*: Números inteiros
+- *BINÁRIO*: Valores true/false
+- *CONJ_Q*: Números decimais
+- *TEXO*: Texto de até 20 caracteres
 
 ### Formato de Arquivo
 
@@ -34,7 +34,7 @@ timestamp sensor valor
 ## Programas
 
 ### 1. pgm3.c - Gerador de Dados
-Gera dados sintéticos para teste do sistema.
+Gera dados sintéticos para teste do sistema em ordem decrescente.
 
 *Uso:*
 bash
@@ -42,16 +42,16 @@ bash
 
 *Exemplo:*
 bash
-./pgm3 "01/01/2024" "00:00:00" "31/01/2024" "23:59:59" "TEMP:2,HUMID:1,MOTION:0"
+./pgm3 "01/01/2024" "00:00:00" "31/01/2024" "23:59:59" "TEMP:CONJ_Q,HUMID:BINARIO,MOTION:CONJ_Z"
 
 
 *Tipos de Sensores:*
-- *0*: INTEIRO (valores 0-999)
-- *1*: BOOLEANO (true/false)
-- *2*: RACIONAL (valores decimais 0-100)
-- *3*: STRING (texto aleatório)
+- *0*: CONJ_Z (inteiros) (valores 0-999)
+- *1*: BINÁRIO (booleanos) (true/false)
+- *2*: CONJ_Q (racional/float) (valores decimais 0-100)
+- *3*: TEXTO (string) (texto aleatório)
 
-*Saída:* Arquivo `dados.txt` com 2000 leituras por sensor.
+*Saída:* Arquivo `dados.txt` com 2000 leituras por sensor (em ordem decrescente).
 
 ### 2. pgm1.c - Processador de Dados
 Processa arquivo de dados brutos e organiza por sensor.
@@ -100,7 +100,7 @@ gcc -o pgm2 pgm2.c
 ### 2. Fluxo de Trabalho
 1. *Gerar dados de teste:*
    bash
-   ./pgm3 "01/01/2024" "00:00:00" "01/02/2024" "23:59:59" "TEMP:2,PRESS:0,STATUS:1"
+   ./pgm3 "01/01/2024" "00:00:00" "01/02/2024" "23:59:59" "TEMP:CONJ_Q,PRESS:CONJ_Z,STATUS:BINARIO"
    
 
 2. *Processar dados:*
@@ -117,12 +117,12 @@ gcc -o pgm2 pgm2.c
 
 ### Detecção de Tipos
 O sistema identifica automaticamente o tipo baseado no valor:
-- Strings "true"/"false" -> BOOLEANO
-- Números inteiros -> INTEIRO
-- Números decimais -> RACIONAL
-- Outros valores -> STRING
+- Strings "true"/"false" -> BINÁRIO
+- Números inteiros -> CONJ_Z
+- Números decimais -> CONJ_Q
+- Outros valores -> TEXTO
 
-### Busca Binária com Proximidade
+### Busca Binária com Proximidade (para ordem decrescente)
 - Busca binária no array ordenado por timestamp
 - Algoritmo de proximidade
 
