@@ -118,16 +118,17 @@ Valor converterValor(const char* str, TipoDado tipo) {
             v.racional = atof(str);
             break;
         case TIPO_STR:
-            strcpy(v.string, str);
+            strncpy(v.string, str, sizeof(v.string) - 1);
+            v.string[sizeof(v.string) - 1] = '\0';
             break;
     }
     
     return v;
 }
 
-// Busca binária
+// Busca binária para array ordenada em ordem decrescente
 
-int buscarMaisProximo(Registro *dados, int n, long tsBuscado) {
+int buscarMaisProximoDecresc(Registro *dados, int n, long tsBuscado) {
     if (n == 0) return -1;
     
     int inicio = 0, fim = n - 1;
@@ -145,7 +146,8 @@ int buscarMaisProximo(Registro *dados, int n, long tsBuscado) {
         
         if (dados[meio].timestamp == tsBuscado) {
             return meio;
-        } else if (dados[meio].timestamp < tsBuscado) {
+        } 
+        else if (dados[meio].timestamp > tsBuscado) {
             inicio = meio + 1;
         } else {
             fim = meio - 1;
@@ -190,11 +192,20 @@ int main(int argc, char *argv[]) {
     long tsConsulta;
     
     if (argc == 3) {
-        strcpy(nomeSens, argv[1]);
+        strncpy(nomeSens, argv[1], sizeof(nomeSens) - 1);
+        nomeSens[sizeof(nomeSens) - 1] = '\0';
         tsConsulta = atol(argv[2]);
+        
+        if (tsConsulta <= 0) {
+            printf("Timestamp inválido: %s\n", argv[2]);
+            return 1;
+        }
     } else if (argc == 1) {
         printf("Nome do sensor: ");
-        scanf("%s", nomeSens);
+        if (scanf("%19s", nomeSens) != 1) {
+            printf("Erro ao ler nome do sensor\n");
+            return 1;
+        }
         
         printf("Informe a data e hora:\n");
         tsConsulta = lerTimestamp();
@@ -204,7 +215,7 @@ int main(int argc, char *argv[]) {
     }
     
     char nomeArq[30];
-    sprintf(nomeArq, "%s.txt", nomeSens);
+    snprintf(nomeArq, sizeof(nomeArq), "%s.txt", nomeSens);
     
     FILE *arq = fopen(nomeArq, "r");
     if (!arq) {
@@ -218,7 +229,7 @@ int main(int argc, char *argv[]) {
     long ts;
     char sensor[20], valor[20];
     
-    while (fscanf(arq, "%ld %s %s", &ts, sensor, valor) == 3) {
+    while (fscanf(arq, "%ld %19s %19s", &ts, sensor, valor) == 3) {
         numReg++;
     }
     
@@ -239,7 +250,7 @@ int main(int argc, char *argv[]) {
     rewind(arq);
     int i = 0;
     
-    while (fscanf(arq, "%ld %s %s", &ts, sensor, valor) == 3) {
+    while (fscanf(arq, "%ld %19s %19s", &ts, sensor, valor) == 3 && i < numReg) {
         dados[i].timestamp = ts;
         dados[i].tipo = detectarTipo(valor);
         dados[i].valor = converterValor(valor, dados[i].tipo);
@@ -248,10 +259,10 @@ int main(int argc, char *argv[]) {
     
     fclose(arq);
     
-    printf("Arquivo %s: %d registros\n", nomeArq, numReg);
+    printf("Arquivo %s: %d registros (ordenado DECRESCENTE)\n", nomeArq, numReg);
     printf("Buscando timestamp %ld...\n", tsConsulta);
     
-    int indice = buscarMaisProximo(dados, numReg, tsConsulta);
+    int indice = buscarMaisProximoDecresc(dados, numReg, tsConsulta);
     
     if (indice == -1) {
         printf("Erro na busca\n");
