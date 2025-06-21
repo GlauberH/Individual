@@ -31,6 +31,9 @@ typedef struct {
     char valor[MAX_STRING_VALUE + 1];
 } Leitura;
 
+// Array global para evitar estouro de pilha
+static Leitura leituras[MAX_SENS * LEIT_PSENSOR];
+
 // Validar data
 
 int validar_data(int dia, int mes, int ano) {
@@ -308,7 +311,6 @@ int main(int argc, char *argv[]) {
     tm_final.tm_isdst = -1;
     
     size_t total_leit = num_sens * LEIT_PSENSOR;
-    static Leitura leituras[MAX_SENS * LEIT_PSENSOR];
     
     size_t idx = 0;
     for (int i = 0; i < num_sens; i++) {
